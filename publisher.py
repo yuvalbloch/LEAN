@@ -52,6 +52,7 @@ def publish_to_buttondown(html: str, subject: str, api_key: str) -> str:
         headers={
             "Authorization": f"Token {api_key}",
             "Content-Type": "application/json",
+            "X-Buttondown-Live-Dangerously": "true",
         },
         method="POST",
     )
