@@ -27,7 +27,7 @@ def publish_to_buttondown(html: str, subject: str, api_key: str) -> str:
     """
     payload = json.dumps({
         "subject": subject,
-        "body": html,
+        "body": "<!-- buttondown-editor-mode: fancy -->" + html,
         "status": "draft",
     }).encode("utf-8")
 
