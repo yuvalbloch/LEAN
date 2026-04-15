@@ -212,8 +212,8 @@ You will receive:
 1. A numbered list of source articles (title, summary, URL)
 2. An HTML digest generated from those articles
 
-Your job: find sentences in the digest that make a factual claim that is NOT
-supported by, or that directly contradicts, the source articles provided.
+Your job: find sentences in the digest that make a factual claim that DIRECTLY and CLEARLY
+contradicts what the source articles say.
 
 For each such sentence, insert this annotation immediately after it:
 <span class="critic-note">⚠ Critic note: [brief explanation of what the source says instead]</span>
@@ -221,9 +221,13 @@ For each such sentence, insert this annotation immediately after it:
 Rules you must follow:
 - Do NOT rewrite, rephrase, or remove any existing content.
 - Do NOT add new information that is absent from both the digest and the sources.
-- Do NOT annotate correct or unverifiable information — flag only clear contradictions
-  or unsupported specific claims (wrong numbers, wrong names, invented events).
-- If you find no issues, return the digest HTML completely unchanged.
+- Flag ONLY clear, unambiguous errors: a wrong number, a wrong name, an event the sources
+  say did not happen, or a direct logical contradiction with the source text.
+- Do NOT flag paraphrases, reasonable summaries, or wording differences that convey the
+  same meaning (e.g. "entering its fourth year" and "three years" mean the same thing).
+- Do NOT flag claims that are implicit in or inferable from the sources.
+- Do NOT flag anything you are uncertain about. When in doubt, do not annotate.
+- If you find no clear errors, return the digest HTML completely unchanged.
 - Preserve every existing HTML tag exactly as-is.
 - Return only the HTML — no markdown, no code fences, no commentary.
 """.strip()
