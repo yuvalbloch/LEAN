@@ -11,11 +11,26 @@ Usage:
 """
 
 import json
+import re
 import urllib.request
 import urllib.error
 
 
 _BUTTONDOWN_API_URL = "https://api.buttondown.email/v1/emails"
+
+
+def _extract_body_fragment(full_html: str) -> str:
+    """
+    Buttondown expects an HTML fragment, not a full document.
+    Extract the <style> block and <body> content from the full HTML.
+    """
+    style_match = re.search(r"<style[^>]*>(.*?)</style>", full_html, re.DOTALL)
+    style_block = f"<style>{style_match.group(1)}</style>\n" if style_match else ""
+
+    body_match = re.search(r"<body[^>]*>(.*?)</body>", full_html, re.DOTALL)
+    body_content = body_match.group(1) if body_match else full_html
+
+    return style_block + body_content
 
 
 def publish_to_buttondown(html: str, subject: str, api_key: str) -> str:
@@ -25,9 +40,11 @@ def publish_to_buttondown(html: str, subject: str, api_key: str) -> str:
     Returns the draft email ID (str) on success.
     Raises RuntimeError if the API returns a non-2xx response.
     """
+    fragment = "<!-- buttondown-editor-mode: fancy -->\n" + _extract_body_fragment(html)
+
     payload = json.dumps({
         "subject": subject,
-        "body": "<!-- buttondown-editor-mode: fancy -->" + html,
+        "body": fragment,
         "status": "draft",
     }).encode("utf-8")
 
