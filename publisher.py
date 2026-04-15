@@ -1,9 +1,7 @@
 """
 publisher.py — optional Buttondown newsletter integration.
 
-Publishes the digest as a draft email on Buttondown.
-Drafts are never sent automatically — they require manual review and send
-in the Buttondown dashboard.
+Publishes the digest to Buttondown and sends it immediately.
 
 Usage:
     Set BUTTONDOWN_ENABLED = True and BUTTONDOWN_API_KEY in config.py (or .env).
@@ -35,9 +33,9 @@ def _extract_body_fragment(full_html: str) -> str:
 
 def publish_to_buttondown(html: str, subject: str, api_key: str) -> str:
     """
-    Post the digest HTML to Buttondown as a draft.
+    Post the digest HTML to Buttondown and send it immediately.
 
-    Returns the draft email ID (str) on success.
+    Returns the email ID (str) on success.
     Raises RuntimeError if the API returns a non-2xx response.
     """
     fragment = "<!-- buttondown-editor-mode: fancy -->\n" + _extract_body_fragment(html)
@@ -45,7 +43,7 @@ def publish_to_buttondown(html: str, subject: str, api_key: str) -> str:
     payload = json.dumps({
         "subject": subject,
         "body": fragment,
-        "status": "draft",
+        "status": "about_to_send",
     }).encode("utf-8")
 
     request = urllib.request.Request(
