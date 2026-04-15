@@ -12,33 +12,8 @@ error never blocks email delivery.
 """
 
 import anthropic
+import config
 from summariser import _format_articles_for_prompt
-
-
-CRITIC_MODEL = "claude-haiku-4-5-20251001"   # fast + cheap; Opus is overkill here
-
-CRITIC_SYSTEM_PROMPT = """
-You are a factual accuracy reviewer for a news digest.
-
-You will receive:
-1. A numbered list of source articles (title, summary, URL)
-2. An HTML digest generated from those articles
-
-Your job: find sentences in the digest that make a factual claim that is NOT
-supported by, or that directly contradicts, the source articles provided.
-
-For each such sentence, insert this annotation immediately after it:
-<span class="critic-note">⚠ Critic note: [brief explanation of what the source says instead]</span>
-
-Rules you must follow:
-- Do NOT rewrite, rephrase, or remove any existing content.
-- Do NOT add new information that is absent from both the digest and the sources.
-- Do NOT annotate correct or unverifiable information — flag only clear contradictions
-  or unsupported specific claims (wrong numbers, wrong names, invented events).
-- If you find no issues, return the digest HTML completely unchanged.
-- Preserve every existing HTML tag exactly as-is.
-- Return only the HTML — no markdown, no code fences, no commentary.
-""".strip()
 
 
 def review(articles: list[dict], digest_html: str, api_key: str) -> str:
@@ -70,9 +45,9 @@ def review(articles: list[dict], digest_html: str, api_key: str) -> str:
         )
 
         message = client.messages.create(
-            model=CRITIC_MODEL,
+            model=config.CRITIC_MODEL,
             max_tokens=8192,
-            system=CRITIC_SYSTEM_PROMPT,
+            system=config.CRITIC_SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_prompt}],
         )
 

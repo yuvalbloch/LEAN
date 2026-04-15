@@ -1,8 +1,10 @@
-# Personal News Digest
+# LEAN — Personal News Digest
 
-Daily pipeline: fetch RSS, rank with Claude, generate an HTML digest, and send by email.
+A self-hosted daily news pipeline that fetches RSS articles, filters and ranks them with Claude AI, generates a structured HTML digest, and delivers it by email each morning.
 
-For design intent and editorial principles, see `PHILOSOPHY.md`.
+**LEAN** is designed around one principle: stay informed without being emotionally manipulated. No sensationalism, no exclamation marks, no doom-scrolling — just calm, factual summaries from sources you choose.
+
+For design intent and editorial principles, see [PHILOSOPHY.md](PHILOSOPHY.md).
 
 ## Pipeline
 
@@ -26,8 +28,8 @@ fetch → filter (Haiku) → summarise (Opus) → critic review (Haiku) → emai
 pip install -r requirements.txt
 ```
 
-> Use `python3`, not `python`. The default `python` on this machine is 3.6,
-> which does not support the type syntax used in this project.
+> **Requires Python 3.10+.** Use `python3` to ensure you get the right version
+> (`python` on some systems still points to Python 2 or 3.6).
 
 **2. Create a `.env` file**
 
@@ -53,7 +55,9 @@ committed to git.
 
 - `EMAIL_TO` / `EMAIL_FROM` / `EMAIL_SUBJECT` — delivery addresses
 - `RSS_FEEDS` — list of feed URLs to pull from
-- `QUOTAS` — per-section output limits passed to Claude
+- `DIGEST_SECTIONS` — per-section output limits passed to Claude
+
+See [config_guide.md](config_guide.md) for a full reference of every available setting.
 
 ## Run
 
@@ -82,6 +86,8 @@ API and is skipped automatically if `ANTHROPIC_API_KEY` is not set.
   and Anthropic API key, as they were previously hardcoded in `config.py`
 
 ## Scheduling
+
+For server deployment (Vultr, DigitalOcean, etc.), see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ### Windows (Task Scheduler)
 
@@ -115,3 +121,7 @@ Use `python3`, not `python`.
 This digest is an informational tool, not professional advice (financial, legal,
 medical, or safety-critical). Always verify important claims with primary sources
 before acting. Content is AI-generated and has not been personally reviewed.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

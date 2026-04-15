@@ -88,14 +88,134 @@ def validate_config():
         )
 
 
-# ── Digest quotas ──────────────────────────────────────────────────────────────
-# These are passed to the AI prompt — they describe the output structure.
-QUOTAS = {
-    "israel_max": 5,
-    "israel_politics_max": 3,
-    "global_max": 3,
-    "science_economy_max": 2,
-    "ai_max": 1,                 # within science/economy
-    "positive_min": 2,
-    "positive_max": 3,
-}
+# ── Digest sections ────────────────────────────────────────────────────────────
+# Defines the sections of the daily digest and the constraints passed to Claude.
+#
+# Each entry is a dict with:
+#   id    (str)  — HTML id for the section div, used as the placeholder name
+#   title (str)  — heading shown in the digest
+#   max   (int)  — maximum number of items Claude should include
+#   min   (int, optional) — minimum number of items (useful for "good news")
+#   sub_constraints (list, optional) — per-topic caps within this section,
+#       each a dict: {"topic": "<description>", "max": <int>}
+#   notes (str, optional) — extra editorial instruction appended to the comment
+#
+# To add a section (e.g. India): copy an existing entry, give it a new id/title,
+# set the counts, and add sub_constraints if you want topic caps within it.
+# To remove a section: delete its entry from the list.
+DIGEST_SECTIONS = [
+    {
+        "id": "israel",
+        "title": "Israel",
+        "max": 5,
+        "sub_constraints": [
+            {"topic": "domestic politics", "max": 3},
+        ],
+    },
+    {
+        "id": "world",
+        "title": "World",
+        "max": 3,
+    },
+    {
+        "id": "science-economy",
+        "title": "Science & Economy",
+        "max": 2,
+        "sub_constraints": [
+            {"topic": "AI specifically", "max": 1},
+        ],
+    },
+    {
+        "id": "good-news",
+        "title": "Good news",
+        "min": 2,
+        "max": 3,
+        "notes": (
+            "Must be clearly positive without a common negative interpretation. "
+            "Valid: end of a war, renewable energy milestone, medical breakthrough, species recovery. "
+            'Invalid: "stock market up" (could reverse), political victories (divisive).'
+        ),
+    },
+]
+
+# ── Mantras ────────────────────────────────────────────────────────────────────
+# Text shown before and after the digest body.
+# DIGEST_GREETING renders as a larger greeting paragraph.
+# MANTRA_OPENING / MANTRA_CLOSING are lists of paragraphs.
+# Within a paragraph, use \n where you want a <br> line break.
+DIGEST_GREETING = "Good morning, Yuval."
+
+MANTRA_OPENING = [
+    "You are about to read a summary of the current state of the world.",
+    "Remember:\nThe facts of the world do not change based on whether you like them or not.\nYour beliefs matter only through the actions you take.",
+    "Approach this with a beginner's mind — aim for clarity, not certainty.",
+    "You do not need to know every detail.\nUnderstand enough to see the bigger picture,\nso you can make better decisions and contribute in a meaningful way.",
+]
+
+MANTRA_CLOSING = [
+    "You have finished reading your summary of the world.",
+    "Now step away, focus on what matters,\nand do your part to make it better.",
+]
+
+# ── Models ─────────────────────────────────────────────────────────────────────
+FILTER_MODEL    = "claude-haiku-4-5-20251001"   # fast + cheap for filtering
+SUMMARISER_MODEL = "claude-opus-4-5"             # high-quality digest generation
+CRITIC_MODEL    = "claude-haiku-4-5-20251001"   # fast + cheap for hallucination review
+
+# ── Filter settings ────────────────────────────────────────────────────────────
+FILTER_MAX_ARTICLES_TO_AI = 80    # hard cap on articles sent to the AI filter
+FILTER_MAX_ARTICLES_RETURNED = 25  # how many the AI filter should keep
+
+FILTER_SUBJECTS = [
+    "Israel — domestic politics, economy, society, infrastructure",
+    "Israel — security and military developments",
+    "Middle East — regional diplomacy and conflicts",
+    "Global geopolitics — major international relations and treaties",
+    "Global economy — markets, trade, inflation, central banks",
+    "Science — research breakthroughs,  environment",
+    "Technology — significant developments (not routine product launches)",
+    "Climate and energy — policy, renewables, disasters",
+    "Positive news — clear human or environmental progress, species recovery, end of conflicts",
+]
+
+# ── System prompts ─────────────────────────────────────────────────────────────
+SUMMARISER_SYSTEM_PROMPT = """
+You are a calm, neutral news editor. Your job is to produce a structured daily digest
+from a list of news articles. The reader wants to stay informed without being emotionally
+manipulated, doom-scrolled, or overwhelmed.
+
+Strict rules you must always follow:
+- No emotional or sensational language. No words like "shocking", "alarming", "crisis",
+  "devastating", "explosive", "amid chaos", "fears grow". Use plain factual language.
+- No ALL CAPS words. No exclamation marks.
+- Never use "BREAKING" or urgency framing.
+- Do not editorialize or express opinions. Report what happened.
+- If a story is ambiguous or contested, note that briefly; do not pick a side.
+- The tone should be like a well-edited printed newspaper — informative, calm, complete.
+
+Output format: valid HTML only, no markdown, no code fences.
+Use the exact HTML structure shown in the user prompt.
+""".strip()
+
+CRITIC_SYSTEM_PROMPT = """
+You are a factual accuracy reviewer for a news digest.
+
+You will receive:
+1. A numbered list of source articles (title, summary, URL)
+2. An HTML digest generated from those articles
+
+Your job: find sentences in the digest that make a factual claim that is NOT
+supported by, or that directly contradicts, the source articles provided.
+
+For each such sentence, insert this annotation immediately after it:
+<span class="critic-note">⚠ Critic note: [brief explanation of what the source says instead]</span>
+
+Rules you must follow:
+- Do NOT rewrite, rephrase, or remove any existing content.
+- Do NOT add new information that is absent from both the digest and the sources.
+- Do NOT annotate correct or unverifiable information — flag only clear contradictions
+  or unsupported specific claims (wrong numbers, wrong names, invented events).
+- If you find no issues, return the digest HTML completely unchanged.
+- Preserve every existing HTML tag exactly as-is.
+- Return only the HTML — no markdown, no code fences, no commentary.
+""".strip()

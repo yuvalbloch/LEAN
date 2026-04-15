@@ -10,25 +10,7 @@ import json
 import random
 import re
 import anthropic
-
-
-# ── Subject list ───────────────────────────────────────────────────────────────
-# Edit this to match your interests. These replace the old keyword list.
-SUBJECTS = [
-    "Israel — domestic politics, economy, society, infrastructure",
-    "Israel — security and military developments",
-    "Middle East — regional diplomacy and conflicts",
-    "Global geopolitics — major international relations and treaties",
-    "Global economy — markets, trade, inflation, central banks",
-    "Science — research breakthroughs,  environment",
-    "Technology — significant developments (not routine product launches)",
-    "Climate and energy — policy, renewables, disasters",
-    "Positive news — clear human or environmental progress, species recovery, end of conflicts",
-]
-
-MODEL = "claude-haiku-4-5-20251001"   # fast + cheap for filtering
-MAX_ARTICLES_TO_AI = 80               # hard cap before the AI call
-MAX_ARTICLES_RETURNED = 25            # how many the AI should keep
+import config
 
 
 def filter_articles(articles: list[dict], api_key: str) -> list[dict]:
@@ -37,7 +19,7 @@ def filter_articles(articles: list[dict], api_key: str) -> list[dict]:
 
     # Stage 1: cheap dedup (no API call)
     deduped = _deduplicate(shuffled)
-    deduped = deduped[:MAX_ARTICLES_TO_AI]
+    deduped = deduped[:config.FILTER_MAX_ARTICLES_TO_AI]
 
     if not deduped:
         return []
@@ -84,7 +66,7 @@ def _ai_filter(articles: list[dict], api_key: str) -> list[int]:
     """
     client = anthropic.Anthropic(api_key=api_key)
 
-    subjects_text = "\n".join(f"- {s}" for s in SUBJECTS)
+    subjects_text = "\n".join(f"- {s}" for s in config.FILTER_SUBJECTS)
     articles_text = "\n\n".join(
         f"[{i}] [sources: {a.get('source_count', 1)}] {a['title']}\n{a['description'][:300]}"
         for i, a in enumerate(articles)
@@ -102,14 +84,14 @@ For each article below, decide whether to KEEP or SKIP it based on two criteria:
    treat that as a strong signal of importance.
 
 Return ONLY a JSON array of the indices to keep. Example: [0, 3, 7, 12]
-Keep at most {MAX_ARTICLES_RETURNED} articles.
+Keep at most {config.FILTER_MAX_ARTICLES_RETURNED} articles.
 Return nothing else — no explanation, no markdown, just the JSON array.
 
 Articles:
 {articles_text}"""
 
     message = client.messages.create(
-        model=MODEL,
+        model=config.FILTER_MODEL,
         max_tokens=512,
         messages=[{"role": "user", "content": prompt}],
     )
