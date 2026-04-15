@@ -36,7 +36,12 @@ _load_dotenv()
 # ── Anthropic ──────────────────────────────────────────────────────────────────
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
+# ── Buttondown (optional newsletter publishing) ────────────────────────────────
+BUTTONDOWN_ENABLED = True
+BUTTONDOWN_API_KEY = os.getenv("BUTTONDOWN_API_KEY", "")
+
 # ── Email ──────────────────────────────────────────────────────────────────────
+EMAIL_ENABLED  = False                  # set False to skip direct SMTP delivery (e.g. when using Buttondown)
 EMAIL_TO       = "yuval.bloch2@gmail.com"
 EMAIL_FROM     = "my news <yuval.bloch2@gmail.com>"
 EMAIL_SUBJECT  = "Your morning digest"
@@ -143,7 +148,7 @@ DIGEST_SECTIONS = [
 # DIGEST_GREETING renders as a larger greeting paragraph.
 # MANTRA_OPENING / MANTRA_CLOSING are lists of paragraphs.
 # Within a paragraph, use \n where you want a <br> line break.
-DIGEST_GREETING = "Good morning, Yuval."
+DIGEST_GREETING = "Good morning."
 
 MANTRA_OPENING = [
     "You are about to read a summary of the current state of the world.",
