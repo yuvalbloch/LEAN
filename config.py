@@ -82,10 +82,13 @@ def validate_config():
     missing = []
     if not ANTHROPIC_API_KEY:
         missing.append("ANTHROPIC_API_KEY (set the environment variable)")
-    if not SMTP_USER:
-        missing.append("SMTP_USER (set the environment variable)")
-    if not SMTP_PASSWORD:
-        missing.append("SMTP_PASSWORD (set the environment variable)")
+    if BUTTONDOWN_ENABLED and not BUTTONDOWN_API_KEY:
+        missing.append("BUTTONDOWN_API_KEY (set the environment variable, or set BUTTONDOWN_ENABLED = False)")
+    if EMAIL_ENABLED:
+        if not SMTP_USER:
+            missing.append("SMTP_USER (set the environment variable)")
+        if not SMTP_PASSWORD:
+            missing.append("SMTP_PASSWORD (set the environment variable)")
     if missing:
         raise RuntimeError(
             "Missing required configuration:\n" +

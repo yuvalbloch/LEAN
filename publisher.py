@@ -28,7 +28,7 @@ def publish_to_buttondown(html: str, subject: str, api_key: str) -> str:
     payload = json.dumps({
         "subject": subject,
         "body": html,
-        "status": "sent",
+        "status": "draft",
     }).encode("utf-8")
 
     request = urllib.request.Request(
