@@ -11,9 +11,42 @@ flags. On any failure it returns the original digest unchanged, so a critic
 error never blocks email delivery.
 """
 
+import re
+
 import anthropic
 import config
 from summariser import _format_articles_for_prompt
+
+
+_NOTE_RE = re.compile(r'<span class="critic-note">.*?</span>', re.DOTALL)
+_PARA_RE = re.compile(r'(<p[^>]*>)(.*?)(</p>)', re.DOTALL)
+
+
+def _move_notes_to_paragraph_end(html: str) -> str:
+    """Move every critic-note span to the end of its containing <p> tag."""
+    def _fix(m):
+        open_tag, body, close_tag = m.group(1), m.group(2), m.group(3)
+        notes = _NOTE_RE.findall(body)
+        if not notes:
+            return m.group(0)
+        clean_body = _NOTE_RE.sub("", body).rstrip()
+        return open_tag + clean_body + "".join(notes) + close_tag
+
+    return _PARA_RE.sub(_fix, html)
+
+
+def _deduplicate_notes(html: str) -> str:
+    """Keep only the first occurrence of each distinct critic-note text."""
+    seen: set[str] = set()
+
+    def _keep_first(m):
+        text = m.group(0)
+        if text in seen:
+            return ""
+        seen.add(text)
+        return text
+
+    return _NOTE_RE.sub(_keep_first, html)
 
 
 def review(articles: list[dict], digest_html: str, api_key: str) -> str:
@@ -59,6 +92,8 @@ def review(articles: list[dict], digest_html: str, api_key: str) -> str:
             print("Warning: critic returned non-HTML output — using original digest.")
             return digest_html
 
+        result = _move_notes_to_paragraph_end(result)
+        result = _deduplicate_notes(result)
         return result
 
     except Exception as e:
