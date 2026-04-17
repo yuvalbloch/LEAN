@@ -3,8 +3,14 @@ summariser.py — send filtered articles to Claude and get back a formatted HTML
 """
 
 import datetime
+import json
+import os
+import re
 import anthropic
 import config
+
+
+_HISTORY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deep_dive_history.json")
 
 
 def summarise(articles: list[dict], api_key: str) -> str:
@@ -12,6 +18,7 @@ def summarise(articles: list[dict], api_key: str) -> str:
 
     articles_text = _format_articles_for_prompt(articles)
     today = datetime.date.today().strftime("%A, %B %d").replace(" 0", " ")
+    recent_titles = _load_recent_deep_dives()
 
     user_prompt = f"""
 Today is {today}.
@@ -55,7 +62,7 @@ write a longer analysis in this structure:
   <p><strong>Perspective A:</strong> [One reasonable interpretation or position]</p>
   <p><strong>Perspective B:</strong> [A different reasonable interpretation or position]</p>
 </div>
-
+{_deep_dive_exclusion_note(recent_titles)}
 If no topic qualifies for a deep dive, omit [DEEP_DIVE_BLOCK] entirely.
 
 ━━━ ARTICLES ━━━
@@ -71,10 +78,61 @@ If no topic qualifies for a deep dive, omit [DEEP_DIVE_BLOCK] entirely.
     )
 
     raw_html = message.content[0].text.strip()
+    title = _extract_deep_dive_title(raw_html)
+    if title:
+        _save_deep_dive_title(title)
     return _wrap_in_email_template(raw_html, today)
 
 
 # ── helpers ────────────────────────────────────────────────────────────────────
+
+def _load_recent_deep_dives() -> list[str]:
+    """Return deep dive titles recorded in the past 7 days."""
+    if not os.path.exists(_HISTORY_FILE):
+        return []
+    with open(_HISTORY_FILE) as f:
+        entries = json.load(f)
+    cutoff = datetime.date.today() - datetime.timedelta(days=7)
+    return [
+        e["title"]
+        for e in entries
+        if datetime.date.fromisoformat(e["date"]) >= cutoff
+    ]
+
+
+def _save_deep_dive_title(title: str) -> None:
+    """Append today's deep dive title and prune entries older than 7 days."""
+    entries = []
+    if os.path.exists(_HISTORY_FILE):
+        with open(_HISTORY_FILE) as f:
+            entries = json.load(f)
+    today = datetime.date.today()
+    entries.append({"date": today.isoformat(), "title": title})
+    cutoff = today - datetime.timedelta(days=7)
+    entries = [e for e in entries if datetime.date.fromisoformat(e["date"]) >= cutoff]
+    with open(_HISTORY_FILE, "w") as f:
+        json.dump(entries, f, indent=2)
+
+
+def _extract_deep_dive_title(html: str) -> str | None:
+    """Extract the <h2> title from the deep-dive block, if present."""
+    match = re.search(r'class="deep-dive".*?<h2>(.*?)</h2>', html, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _deep_dive_exclusion_note(recent_titles: list[str]) -> str:
+    """Build the exclusion instruction injected into the prompt."""
+    if not recent_titles:
+        return ""
+    listed = "\n".join(f"  - {t}" for t in recent_titles)
+    return (
+        f"\nThe following topics were already covered in deep dives earlier this week"
+        f" — do not select any of them:\n{listed}\n"
+        f"If one of those topics still qualifies today, pick the next best topic instead.\n"
+    )
+
 
 def _render_mantra_paragraphs(paragraphs: list[str]) -> str:
     """Convert a list of paragraph strings into <p> tags, with \\n → <br>."""
